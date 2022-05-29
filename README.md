@@ -2,7 +2,7 @@
 This is the PyTorch implementation for our paper "dO: A differentiable engine for Deep Lens design of computational imaging systems".
 ### [Manuscript](https://repository.kaust.edu.sa/bitstream/handle/10754/674879/TCI-01787-2021_Proof_hi.pdf?sequence=1)
 
-dO: A differentiable engine for Deep Lens design of computational imaging systems
+dO: A differentiable engine for Deep Lens design of computational imaging systems  
  [Congli Wang](https://congliwang.github.io),
  [Ni Chen](https://ni-chen.github.io), and
  [Wolfgang Heidrich](https://vccimaging.org/People/heidriw)<br>
