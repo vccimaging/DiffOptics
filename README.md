@@ -111,7 +111,7 @@ GitHub: https://github.com/vccimaging/DiffDeflectometry.
   volume={8},
   number={},
   pages={905-916},
-  doi={10.1109/TCI.2022.3212837}},
+  doi={10.1109/TCI.2022.3212837},
   publisher={IEEE}
 }
 ```
