@@ -1,0 +1,6 @@
+matplotlib==3.5.3
+meshio==5.3.4
+mitsuba==3.0.2
+numpy==1.21.6
+scipy==1.9.1
+torch==1.12.1+cu113

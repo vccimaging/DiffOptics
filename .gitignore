@@ -1,0 +1,9 @@
+
+examples/autodiff_demo/*
+examples/data/*
+examples/einstein/*
+examples/einstein_linear/*
+examples/misalignment_point/*
+examples/newton/*
+examples/newton_linear/*
+*.pdf

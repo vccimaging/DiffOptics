@@ -1,13 +1,13 @@
 # dO: A differentiable engine for Deep Lens design of computational imaging systems
 This is the PyTorch implementation for our paper "dO: A differentiable engine for Deep Lens design of computational imaging systems".
-### [Manuscript](https://repository.kaust.edu.sa/bitstream/handle/10754/674879/TCI-01787-2021_Proof_hi.pdf?sequence=1)
+### [Project Page](https://vccimaging.org/Publications/Wang2022DiffOptics/) | [Paper](https://vccimaging.org/Publications/Wang2022DiffOptics/Wang2022DiffOptics.pdf) | [Supplementary Material](https://vccimaging.org/Publications/Wang2022DiffOptics/Wang2022DiffOptics_supp.pdf)
 
 dO: A differentiable engine for Deep Lens design of computational imaging systems  
  [Congli Wang](https://congliwang.github.io),
  [Ni Chen](https://ni-chen.github.io), and
  [Wolfgang Heidrich](https://vccimaging.org/People/heidriw)<br>
 King Abdullah University of Science and Technology (KAUST)<br>
-IEEE Transactions on Computational Imaging 2022 (under review)
+IEEE Transactions on Computational Imaging 2022 
 
 <img src='imgs/overview.jpg'>
 Figure: Our engine dO models ray tracing in a lens system in a derivative-aware way, this enables ray tracing with back-propagation. To be derivative-aware, all modules must be differentiable so that gradients can be back-propagated from the error metric ϵ(p(θ)) to variable parameters θ. This is achieved by two stages of the reverse-mode AD: the forward and the backward passes. To ensure differentiability and efficiency, a custom ray-surface intersection solver is introduced. Instead of unrolling iterations for forward/backward, only the forward (no AD) is computed to obtain solutions at surfaces fi = 0, and gradients are amended afterwards.
@@ -16,7 +16,36 @@ Figure: Our engine dO models ray tracing in a lens system in a derivative-aware 
 
 We implemented in PyTorch a memory- and computation-efficient differentiable ray tracing system for optical designs, for design applications in freeform, Deep Lens, metrology, and more.
 
-**Code will be released once reviews are out.**
+## Update list
+
+- [x] Initial code release.
+- [x] [`autodiff.py`](./examples/autodiff.py): Demo illustration of the `dO` engine.
+- [x] [`backprop_compare.py`](./examples/backprop_compare.py): Example on comparison between back-propagation and adjoint back-propagation.
+- [x] [`caustic_pyramid.py`](./examples/caustic_pyramid.py): Example on freeform caustic design.
+- [x] [`misalignment_point.py`](./examples/misalignment_point.py): Example on misalignment back-engineering, using real measurements.
+- [x] [`spherical_aberration.py`](./examples/spherical_aberration.py): Example on optimizing spherical aberration.
+- [x] [`nikon.py`](./examples/nikon.py): Example on optimizing a Nikon design.
+- [ ] [`sanity_check.py`](./examples/sanity_check.py): Example on Zemax versus dO sanity check.
+- [ ] [`end2end_simplelens.py`](./examples/end2end_simplelens.py): Example on end-to-end learning with a simple lens.
+- [ ] Code cleanups and comments.
+
+
+## Install
+
+### Prerequisite
+Though no GPUs are required, for speed's sake it is better to run the engine on a GPU.
+
+Install the required Python packages:
+```python
+pip install -r requirements.txt
+```
+
+You may run the examples in the [`./examples`](./examples) folder.  In case Python cannot find the path to `dO`, run the example scripts in the [`./examples`](./examples) directory, e.g.:
+```shell
+cd <directory_of_this_repository>/examples
+python3 misalignment_point.py
+```
+
 
 ## Summary
 
@@ -69,6 +98,10 @@ GitHub: https://github.com/vccimaging/DiffDeflectometry.
   author={Wang, Congli and Chen, Ni and Heidrich, Wolfgang},
   journal={IEEE Transactions on Computational Imaging},
   year={2022},
+  volume={8},
+  number={},
+  pages={905-916},
+  doi={10.1109/TCI.2022.3212837}},
   publisher={IEEE}
 }
 ```
