@@ -5,6 +5,8 @@ from pathlib import Path
 from matplotlib.image import imread, imsave
 import cv2
 
+import imageio
+
 import sys
 sys.path.append("../")
 import diffoptics as do
@@ -113,7 +115,6 @@ def crop(I):
 opath = Path('misalignment_point')
 opath.mkdir(parents=True, exist_ok=True)
 def save(I_mea, Is):
-    import imageio
     images = []
     for I in Is:
         images.append(crop(I))

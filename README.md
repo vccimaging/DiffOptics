@@ -23,8 +23,8 @@ We implemented in PyTorch a memory- and computation-efficient differentiable ray
 - [x] [`backprop_compare.py`](./examples/backprop_compare.py): Example on comparison between back-propagation and adjoint back-propagation.
 - [x] [`caustic_pyramid.py`](./examples/caustic_pyramid.py): Example on freeform caustic design.
 - [x] [`misalignment_point.py`](./examples/misalignment_point.py): Example on misalignment back-engineering, using real measurements.
-- [x] [`spherical_aberration.py`](./examples/spherical_aberration.py): Example on optimizing spherical aberration.
 - [x] [`nikon.py`](./examples/nikon.py): Example on optimizing a Nikon design.
+- [x] [`spherical_aberration.py`](./examples/spherical_aberration.py): Example on optimizing spherical aberration.
 - [ ] [`sanity_check.py`](./examples/sanity_check.py): Example on Zemax versus dO for sanity check.
 - [ ] [`end2end_simplelens.py`](./examples/end2end_simplelens.py): Example on end-to-end learning with a simple lens.
 - [ ] Code cleanups and comments.
@@ -42,7 +42,11 @@ Install the required Python packages:
 pip install -r requirements.txt
 ```
 
-Examples are in the [`./examples`](./examples) folder, and you may need to install additional Python packages when needed, follow the terminal hints.
+Examples are in the [`./examples`](./examples) folder, and running some of the examples may require installing additional Python packages.  Just follow the terminal hints, for example install the following:
+
+```shell
+pip install imageio opencv-python scikit-image
+```
 
 In case Python cannot find the path to `dO`, run the example scripts in the [`./examples`](./examples) directory, for example:
 
