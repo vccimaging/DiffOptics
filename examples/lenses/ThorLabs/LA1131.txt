@@ -1,0 +1,6 @@
+Thorlabs-LA1131
+type distance roc diameter material
+O 20      0   100 AIR
+S 0     25.75    25.4 N-BK7
+S 5.34     0    25.4 AIR
+I 4.42     0    25.4 AIR

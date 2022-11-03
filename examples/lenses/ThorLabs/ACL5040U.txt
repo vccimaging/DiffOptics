@@ -1,0 +1,6 @@
+Thorlabs-ACL5040U
+type distance roc diameter material
+O 20      0             100      AIR
+S 0       20.923        50.0     B270   -0.6405 2.0e-06
+S 21.0    0             50.0     AIR
+I 26.0    0             50.0     AIR
