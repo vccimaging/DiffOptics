@@ -19,13 +19,13 @@ We implemented in PyTorch a memory- and computation-efficient differentiable ray
 ## Update list
 
 - [x] Initial code release.
-- [x] [`autodiff.py`](./examples/autodiff.py): Demo illustration of the `dO` engine.
+- [x] [`autodiff.py`](./examples/autodiff.py): Demo of the `dO` engine.
 - [x] [`backprop_compare.py`](./examples/backprop_compare.py): Example on comparison between back-propagation and adjoint back-propagation.
 - [x] [`caustic_pyramid.py`](./examples/caustic_pyramid.py): Example on freeform caustic design.
 - [x] [`misalignment_point.py`](./examples/misalignment_point.py): Example on misalignment back-engineering, using real measurements.
 - [x] [`nikon.py`](./examples/nikon.py): Example on optimizing a Nikon design.
 - [x] [`spherical_aberration.py`](./examples/spherical_aberration.py): Example on optimizing spherical aberration.
-- [ ] [`sanity_check.py`](./examples/sanity_check.py): Example on Zemax versus dO for sanity check.
+- [ ] [`sanity_check.py`](./examples/sanity_check.py): Example on Zemax versus `dO` for sanity check.
 - [ ] [`end2end_simplelens.py`](./examples/end2end_simplelens.py): Example on end-to-end learning with a simple lens.
 - [ ] Code cleanups and comments.
 - [ ] File I/O with Zemax.
@@ -42,6 +42,7 @@ Install the required Python packages:
 pip install -r requirements.txt
 ```
 
+### Running examples
 Examples are in the [`./examples`](./examples) folder, and running some of the examples may require installing additional Python packages.  Just follow the terminal hints, for example install the following:
 
 ```shell

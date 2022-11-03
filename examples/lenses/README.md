@@ -1,6 +1,6 @@
 ## Materials
 
-We modeled all materials with Cauchy's coefficients. Predefined materials could be found in [`../../diffoptics/basics.py`](../../diffoptics/basics.py).
+We modeled all materials with Cauchy's coefficients. Predefined materials could be found in [`../../diffoptics/basics.py`](https://github.com/vccimaging/DiffOptics/blob/7c30e22967280c97fb2953db0bcf894611df37b7/diffoptics/basics.py#L188-L234).
 
 Custom materials could be specified as `<center refractive index at nD> / <Abbe number [um]>`, for example:
 
@@ -35,3 +35,4 @@ where the symbol means are:
 |  `S`   |   Asphere    |  Lens surface  |
 |  `A`   |   Asphere    | Aperture plane |
 |  `I`   |   Asphere    |  Image plane   |
+
