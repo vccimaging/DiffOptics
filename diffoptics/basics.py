@@ -281,7 +281,7 @@ Utility functions.
 
 def init():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print("DiffMetrology is using: {}".format(device))
+    print("DiffOptics is using: {}".format(device))
     torch.set_default_tensor_type('torch.FloatTensor')
     return device
 
