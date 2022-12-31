@@ -32,12 +32,11 @@ class Screen(Endpoint):
     
     Local frame centers at [-w, w]/2 x [-h, h]/2.
     """
-    def __init__(self, transformation, size, pixelsize, texture, device=torch.device('cpu')):
+    def __init__(self, transformation, size, texture, device=torch.device('cpu')):
         self.size = torch.Tensor(np.float32(size))  # screen dimension [mm]
         self.halfsize  = self.size/2                # screen half-dimension [mm]
-        self.pixelsize = torch.Tensor([pixelsize])  # screen pixel size [mm]
         self.texture   = torch.Tensor(texture)      # screen image
-        self.texturesize = torch.Tensor(np.array(texture.shape[0:2])) # screen image dimension [pixel]
+        self.texturesize = torch.Tensor(np.array(texture.shape[0:2])).long() # screen image dimension [pixel]
         self.texturesize_np = self.texturesize.cpu().detach().numpy() # screen image dimension [pixel]
         self.texture_shift = torch.zeros(2)         # screen image shift [mm]
         Endpoint.__init__(self, transformation, device)

@@ -453,14 +453,11 @@ class Lensgroup(Endpoint):
             draw_aperture(ax, self.surfaces[0], color)
         else:
             # draw sensor plane
-            if with_sensor == True:
+            if with_sensor:
                 try:
-                    tmpr, tmpdd = self.r_last, self.d_sensor
+                    self.surfaces.append(Aspheric(self.r_last, self.d_sensor, 0.0))
                 except AttributeError:
                     with_sensor = False
-
-            if with_sensor:
-                self.surfaces.append(Aspheric(self.r_last, self.d_sensor, 0.0))
 
             # draw surface
             for i, s in enumerate(self.surfaces):
@@ -912,7 +909,7 @@ class Lensgroup(Endpoint):
     # ------------------------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------------------------
-    def prepare_mts(self, pixel_size, film_size, R=np.eye(3), t=np.zeros(3), room_scale=1.):
+    def prepare_mts(self, pixel_size, film_size, R=np.eye(3), t=np.zeros(3)):
         # TODO: this is actually prepare_backward tracing ...
         """
         Revert surfaces for Mitsuba2 rendering.
@@ -928,7 +925,9 @@ class Lensgroup(Endpoint):
         # rendering parameters
         self.mts_Rt = Transformation(R, t) # transformation of the lensgroup
         self.mts_Rt.to(self.device)
-        self.room_scale = room_scale # 1 room unit = `self.room_scale` lens unit [mm]
+
+        # for visualization
+        self.r_last = self.pixel_size * max(self.film_size) / 2
 
         # TODO: could be further optimized:
         # treat the lenspart as a camera; append one more surface to it
@@ -949,44 +948,74 @@ class Lensgroup(Endpoint):
         self.aperture_radius = self.surfaces[0].r
         self.aperture_distance = self.surfaces[0].d
         self.mts_prepared = True
+        self.d_sensor = 0
 
-    def sample_ray_mts(self, N, wav, sample2, sample3, offset=np.zeros(2)):
-        """
-        Sample ray on the sensor plane.
-        """
-        if not self.mts_prepared:
-            raise Exception('MTS unprepared; please call `prepare_mts()` first!')
-        
-        # convert enoki vectors to numpy
-        _sample2, _sample3 = (v.numpy() for v in [sample2, sample3])
-        _wav = wav.x.numpy().reshape((N))
-
-        # sample ray
-        valid, ray = self._sample_ray_render(N, _wav, _sample2, _sample3, offset)
-
-        # convert to world coordinate
-        o = np.squeeze(self.mts_Rt.R @ ray.o[..., None]) / self.room_scale + self.mts_Rt.t
-        d = np.squeeze(self.mts_Rt.R @ ray.d[..., None])
-
-        o, d = (v.numpy().reshape((N,3)) for v in [o, d])
-        return o, d, valid
-    
-    def sample_ray_sensor(self, wavelength, aperture_sample=[0.5, 0.5], offset=np.zeros(2)):
-        """
-        Sample ray (formed by origin `sample2` and direction `sample3`) on the sensor plane.
-        """
-        # wavelength [nm]
-        if not self.mts_prepared:
-            raise Exception('MTS unprepared; please call `prepare_mts()` first!')
+    def _generate_sensor_samples(self):
         sX, sY = np.meshgrid(
             np.linspace(0, 1, self.film_size[0]),
             np.linspace(0, 1, self.film_size[1])
         )
+        return np.stack((sX.flatten(), sY.flatten()), axis=1)
+
+    def _generate_aperture_samples(self):
+        Dx = np.random.rand(*self.film_size)
+        Dy = np.random.rand(*self.film_size)
+        [px, py] = Sampler().concentric_sample_disk(Dx, Dy)
+        return np.stack((px.flatten(), py.flatten()), axis=1)
+
+    def sample_ray_sensor_pinhole(self, wavelength, focal_length):
+        """
+        Sample ray on the sensor plane, assuming a pinhole camera model, given a focal length.
+        """
+        if not self.mts_prepared:
+            raise Exception('MTS unprepared; please call `prepare_mts()` first!')
+        
         N = np.prod(self.film_size)
-        sample2 = np.stack((sX.flatten(), sY.flatten()), axis=1)
-        sample3 = np.ones_like((N,1)) * np.asarray(aperture_sample)[None, :]
+
+        # sensor and aperture plane samplings
+        sample2 = self._generate_sensor_samples()
+        
+        # wavelength [nm]
+        wavelength = torch.Tensor(wavelength * np.ones(N))
+
+        # normalized to [-0,5, 0.5]
+        sample2 = sample2 - 0.5
+
+        # sample sensor and aperture planes
+        p_sensor = sample2 * np.array([
+            self.pixel_size * self.film_size[0], self.pixel_size * self.film_size[1]
+        ])[None,:]
+        
+        # aperture samples (last surface plane)
+        p_aperture = 0
+        d_xy = p_aperture - p_sensor
+
+        # construct ray
+        o = torch.Tensor(np.hstack((p_sensor, np.zeros((N,1)))).reshape((N,3)))
+        d = torch.Tensor(np.hstack((d_xy, focal_length * np.ones((N,1)))).reshape((N,3)))
+        d = normalize(d)
+
+        ray = Ray(o, d, wavelength, device=self.device)
+        valid = torch.ones(ray.o[..., 2].shape, device=self.device).bool()
+        return valid, ray
+    
+    def sample_ray_sensor(self, wavelength, offset=np.zeros(2)):
+        """
+        Sample rays on the sensor plane.
+        """
+        if not self.mts_prepared:
+            raise Exception('MTS unprepared; please call `prepare_mts()` first!')
+        
+        N = np.prod(self.film_size)
+        
+        # sensor and aperture plane samplings
+        sample2 = self._generate_sensor_samples()
+        sample3 = self._generate_aperture_samples()
+
+        # wavelength [nm]
         wav = wavelength * np.ones(N)
         
+        # sample ray
         valid, ray = self._sample_ray_render(N, wav, sample2, sample3, offset)
         ray_new = self.mts_Rt.transform_ray(ray)
         return valid, ray_new
@@ -1015,6 +1044,7 @@ class Lensgroup(Endpoint):
         # offset sensor positions
         p_sensor = p_sensor + offset
 
+        # aperture samples (last surface plane)
         p_aperture = sample3 * self.aperture_radius
         d_xy = p_aperture - p_sensor
 
