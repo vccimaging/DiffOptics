@@ -67,5 +67,5 @@ for wavelength_id, wavelength in enumerate(wavelengths):
     Is.append(I.cpu())
 
 # show image
-plt.imshow(torch.stack(Is, axis=-1).numpy().astype(np.uint8), 'gray')
+plt.imshow(torch.stack(Is, axis=-1).numpy().astype(np.uint8))
 plt.show()

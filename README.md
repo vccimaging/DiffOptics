@@ -25,6 +25,7 @@ We implemented in PyTorch a memory- and computation-efficient differentiable ray
 - [x] [`misalignment_point.py`](./examples/misalignment_point.py): Example on misalignment back-engineering, using real measurements.
 - [x] [`nikon.py`](./examples/nikon.py): Example on optimizing a Nikon design.
 - [x] [`render_image.py`](./examples/render_image.py): Example on rendering a single image from a design.
+- [x] [`render_psf.py`](./examples/render_psf.py): Example on rendering PSFs of varying fields and depths for a design.
 - [x] [`sanity_check.py`](./examples/sanity_check.py): Example on Zemax versus `dO` for sanity check.
 - [x] [`spherical_aberration.py`](./examples/spherical_aberration.py): Example on optimizing spherical aberration.
 - [ ] [`end2end_simplelens.py`](./examples/end2end_simplelens.py): Example on end-to-end learning with a simple lens.
