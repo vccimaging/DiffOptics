@@ -1,4 +1,3 @@
-import math
 from enum import Enum
 import torch
 import numpy as np
@@ -186,9 +185,9 @@ class Material(PrettyPrinter):
 
         # This table is hard-coded. TODO: Import glass libraries from Zemax.
         self.MATERIAL_TABLE = { # [nD, Abbe number]
-            "vacuum":     [1.,       math.inf],
-            "air":        [1.000293, math.inf],
-            "occluder":   [1.,       math.inf],
+            "vacuum":     [1.,       np.inf],
+            "air":        [1.000293, np.inf],
+            "occluder":   [1.,       np.inf],
             "f2":         [1.620,    36.37],
             "f15":        [1.60570,  37.831],
             "uvfs":       [1.458,    67.82],

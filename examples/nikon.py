@@ -21,11 +21,11 @@ diffoptics.basics.Material.__init__.MATERIAL_TABLE
 
 from:
 
-"air":        [1.000293, math.inf],
+"air":        [1.000293, np.inf],
 
 to
 
-"air":        [1.000000, math.inf],
+"air":        [1.000000, np.inf],
 
 And re-run this script.
 """
