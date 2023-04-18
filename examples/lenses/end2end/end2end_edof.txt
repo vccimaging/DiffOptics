@@ -1,0 +1,9 @@
+End2end EDOF exmaple
+type distance roc diameter material
+O       0.0        0.0       0.0      AIR 
+S       0.0       62.8      12.7      n-bk7
+S       4.000    -45.7      12.7      sf5
+S       2.500   -128.2      12.7      AIR
+S       1.500      0.0      12.7      n-bk7
+X       2.500      0.0      12.7      AIR       0 0 0 0 0 0 0 0 0 0 0
+I      96.000      0.0      1.7664    AIR

@@ -35,12 +35,14 @@ class Screen(Endpoint):
     def __init__(self, transformation, size, texture, device=torch.device('cpu')):
         self.size = torch.Tensor(np.float32(size))  # screen dimension [mm]
         self.halfsize  = self.size/2                # screen half-dimension [mm]
-        self.texture   = torch.Tensor(texture)      # screen image
-        self.texturesize = torch.Tensor(np.array(texture.shape[0:2])).long() # screen image dimension [pixel]
-        self.texturesize_np = self.texturesize.cpu().detach().numpy() # screen image dimension [pixel]
         self.texture_shift = torch.zeros(2)         # screen image shift [mm]
+        self.update_texture(texture)
         Endpoint.__init__(self, transformation, device)
         self.to(device)
+
+    def update_texture(self, texture: torch.Tensor):
+        self.texture = texture # screen image
+        self.texturesize = torch.Tensor(np.array(texture.shape[0:2])).long().to(texture.device) # screen image dimension [pixel]
         
     def intersect(self, ray):
         ray_in = self.to_object.transform_ray(ray)
@@ -75,8 +77,8 @@ class Screen(Endpoint):
             if bmode is BoundaryMode.zero:
                 raise NotImplementedError()
             elif bmode is BoundaryMode.replicate:
-                x = torch.clamp(x, min=0, max=self.texturesize_np[0]-1)
-                y = torch.clamp(y, min=0, max=self.texturesize_np[1]-1)
+                x = torch.clamp(x, min=0, max=self.texturesize[0].item()-1)
+                y = torch.clamp(y, min=0, max=self.texturesize[1].item()-1)
             elif bmode is BoundaryMode.symmetric:
                 raise NotImplementedError()
             elif bmode is BoundaryMode.periodic:

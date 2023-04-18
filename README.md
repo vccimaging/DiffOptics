@@ -28,11 +28,10 @@ We implemented in PyTorch a memory- and computation-efficient differentiable ray
 - [x] [`render_psf.py`](./examples/render_psf.py): Example on rendering PSFs of varying fields and depths for a design.
 - [x] [`sanity_check.py`](./examples/sanity_check.py): Example on Zemax versus `dO` for sanity check.
 - [x] [`spherical_aberration.py`](./examples/spherical_aberration.py): Example on optimizing spherical aberration.
-- [ ] [`end2end_simplelens.py`](./examples/end2end_simplelens.py): Example on end-to-end learning with a simple lens.
+- [x] [`end2end_edof_backward_tracing.py`](./examples/end2end_edof_backward_tracing.py): Example on end-to-end learning of wavefront coding, for extended depth of field applications, using backward ray tracing.
 - [ ] Code cleanups and add comments.
 - [ ] File I/O with Zemax.
 - [ ] Mini GUI for easy operations.
-
 
 ## Installation
 
