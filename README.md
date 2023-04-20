@@ -22,15 +22,47 @@ We implemented in PyTorch a memory- and computation-efficient differentiable ray
 - [x] [`autodiff.py`](./examples/autodiff.py): Demo of the `dO` engine.
 - [x] [`backprop_compare.py`](./examples/backprop_compare.py): Example on comparison between back-propagation and adjoint back-propagation.
 - [x] [`caustic_pyramid.py`](./examples/caustic_pyramid.py): Example on freeform caustic design.
+
+|            Target irradiance            |         Optimized irradiance          |        Optimized phase map        |
+| :-------------------------------------: | :-----------------------------------: | :-------------------------------: |
+| ![I_target](imgs/examples/I_target.png) | ![I_final](imgs/examples/I_final.png) | ![phase](imgs/examples/phase.png) |
+
 - [x] [`misalignment_point.py`](./examples/misalignment_point.py): Example on misalignment back-engineering, using real measurements.
+
+|       Model (initial)       |        Measurement        |             Model (optimized)             |
+| :-------------------------: | :-----------------------: | :---------------------------------------: |
+| ![I0](imgs/examples/I0.jpg) | ![I](imgs/examples/I.jpg) | ![optimized](imgs/examples/optimized.mp4) |
+
 - [x] [`nikon.py`](./examples/nikon.py): Example on optimizing a Nikon design.
 - [x] [`render_image.py`](./examples/render_image.py): Example on rendering a single image from a design.
+
+| ![I_rendered](imgs/examples/I_rendered.jpg) |
+| ------------------------------------------- |
+
 - [x] [`render_psf.py`](./examples/render_psf.py): Example on rendering PSFs of varying fields and depths for a design.
+
+| ![I_psf_z=-3000.0](C:\Users\clwan\OneDrive\Documents\GitHub\DiffOptics\imgs\examples\I_psf_z=-3000.0.png) | ![I_psf_z=-2000.0](C:\Users\clwan\OneDrive\Documents\GitHub\DiffOptics\imgs\examples\I_psf_z=-2000.0.png) |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![I_psf_z=-1500.0](C:\Users\clwan\OneDrive\Documents\GitHub\DiffOptics\imgs\examples\I_psf_z=-1500.0.png) | ![I_psf_z=-1000.0](C:\Users\clwan\OneDrive\Documents\GitHub\DiffOptics\imgs\examples\I_psf_z=-1000.0.png) |
+
 - [x] [`sanity_check.py`](./examples/sanity_check.py): Example on Zemax versus `dO` for sanity check.
+
+  |                         `dO`                          |                            Zemax                            |
+  | :---------------------------------------------------: | :---------------------------------------------------------: |
+  | ![sanity_check_dO](imgs/examples/sanity_check_dO.jpg) | ![sanity_check_zemax](imgs/examples/sanity_check_zemax.jpg) |
+
+
 - [x] [`spherical_aberration.py`](./examples/spherical_aberration.py): Example on optimizing spherical aberration.
+
 - [x] [`end2end_edof_backward_tracing.py`](./examples/end2end_edof_backward_tracing.py): Example on end-to-end learning of wavefront coding, for extended depth of field applications, using backward ray tracing.
+
+  | ![iter_1_z=6000.0mm_images](imgs/examples/iter_1_z=6000.0mm_images.png) |
+  | ------------------------------------------------------------ |
+
 - [ ] Code cleanups and add comments.
+
 - [ ] File I/O with Zemax.
+
 - [ ] Mini GUI for easy operations.
 
 ## Installation

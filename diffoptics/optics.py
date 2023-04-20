@@ -126,7 +126,7 @@ class Lensgroup(Endpoint):
                                 b = float(ls[5])
                             else:
                                 ai.append(float(ls[ac]))
-                        surfaces.append(XYPolynomial(r, d_total, J=2, ai=ai, b=b))
+                        surfaces.append(XYPolynomial(r, d_total, J=3, ai=ai, b=b))
                     elif surface_type == 'B': # B-spline
                         del roc
                         ai = []

@@ -29,12 +29,12 @@ z0 = 10e3 # [mm]
 pixelsize = 1.1 # [mm]
 texture = cv2.cvtColor(cv2.imread('./images/squirrel.jpg'), cv2.COLOR_BGR2RGB)
 texture = np.flip(texture.astype(np.float32), axis=(0,1)).copy()
+texture_torch = torch.Tensor(texture).to(device=device)
 texturesize = np.array(texture.shape[0:2])
 screen = do.Screen(
     do.Transformation(np.eye(3), np.array([0, 0, z0])),
-    texturesize * pixelsize, texture, device=device
+    texturesize * pixelsize, texture_torch, device=device
 )
-texture_torch = torch.Tensor(texture).to(device=device)
 
 # helper function
 def render_single(wavelength, screen):
@@ -51,7 +51,7 @@ wavelengths = [656.2725, 587.5618, 486.1327]
 ray_counts_per_pixel = 100
 Is = []
 for wavelength_id, wavelength in enumerate(wavelengths):
-    screen.texture = texture_torch[..., wavelength_id]
+    screen.update_texture(texture_torch[..., wavelength_id])
 
     # multi-pass rendering by sampling the aperture
     I = 0
@@ -67,5 +67,7 @@ for wavelength_id, wavelength in enumerate(wavelengths):
     Is.append(I.cpu())
 
 # show image
-plt.imshow(torch.stack(Is, axis=-1).numpy().astype(np.uint8))
+I_rendered = torch.stack(Is, axis=-1).numpy().astype(np.uint8)
+plt.imshow(I_rendered)
 plt.show()
+plt.imsave('I_rendered.png', I_rendered)
