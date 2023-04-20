@@ -31,7 +31,7 @@ We implemented in PyTorch a memory- and computation-efficient differentiable ray
 
 |       Model (initial)       |        Measurement        |             Model (optimized)             |
 | :-------------------------: | :-----------------------: | :---------------------------------------: |
-| ![I0](imgs/examples/I0.jpg) | ![I](imgs/examples/I.jpg) | ![optimized](imgs/examples/optimized.mp4) |
+| ![I0](imgs/examples/I0.jpg) | ![I](imgs/examples/I.jpg) | ![optimized](imgs/examples/optimized.gif) |
 
 - [x] [`nikon.py`](./examples/nikon.py): Example on optimizing a Nikon design.
 - [x] [`render_image.py`](./examples/render_image.py): Example on rendering a single image from a design.
@@ -41,9 +41,9 @@ We implemented in PyTorch a memory- and computation-efficient differentiable ray
 
 - [x] [`render_psf.py`](./examples/render_psf.py): Example on rendering PSFs of varying fields and depths for a design.
 
-| ![I_psf_z=-3000.0](C:\Users\clwan\OneDrive\Documents\GitHub\DiffOptics\imgs\examples\I_psf_z=-3000.0.png) | ![I_psf_z=-2000.0](C:\Users\clwan\OneDrive\Documents\GitHub\DiffOptics\imgs\examples\I_psf_z=-2000.0.png) |
+| ![I_psf_z=-3000.0](imgs/examples/I_psf_z=-3000.0.png) | ![I_psf_z=-2000.0](imgs/examples/I_psf_z=-2000.0.png) |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ![I_psf_z=-1500.0](C:\Users\clwan\OneDrive\Documents\GitHub\DiffOptics\imgs\examples\I_psf_z=-1500.0.png) | ![I_psf_z=-1000.0](C:\Users\clwan\OneDrive\Documents\GitHub\DiffOptics\imgs\examples\I_psf_z=-1000.0.png) |
+| ![I_psf_z=-1500.0](imgs/examples/I_psf_z=-1500.0.png) | ![I_psf_z=-1000.0](imgs/examples/I_psf_z=-1000.0.png) |
 
 - [x] [`sanity_check.py`](./examples/sanity_check.py): Example on Zemax versus `dO` for sanity check.
 
