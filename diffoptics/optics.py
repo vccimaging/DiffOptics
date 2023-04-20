@@ -1,75 +1,45 @@
 from .basics import *
 from .shapes import *
 from scipy.interpolate import LSQBivariateSpline
-import matplotlib.tri as tri
 import matplotlib.pyplot as plt
-import meshio
 import copy
 import pathlib
 
 
-class System(PrettyPrinter):
-    """
-    System is the top level class that represents an optical system. 
-    """
-    def __init__(self, lensgroup, lenses):
-        self.lenses = lenses
-        self.r_last = lensgroup.r_last
-        self.d_sensor = lensgroup.d_sensor
-        # d_sensor: sensor absolute distance to the whole system
+def tex(img_2d, size_2d, x, y, bmode=BoundaryMode.replicate): # texture indexing function
+    if bmode is BoundaryMode.zero:
+        raise NotImplementedError()
+    elif bmode is BoundaryMode.replicate:
+        x = torch.clamp(x, min=0, max=size_2d[0]-1)
+        y = torch.clamp(y, min=0, max=size_2d[1]-1)
+    elif bmode is BoundaryMode.symmetric:
+        raise NotImplementedError()
+    elif bmode is BoundaryMode.periodic:
+        raise NotImplementedError()
+    img = img_2d[x.flatten(), y.flatten()]
+    return img.reshape(x.shape)
 
-    def trace(self, ray, is_forward=True): # TODO: for now user decides forward or backward
-        def _trace(ray, lenses):
-            valid_all = None
-            for lens in lenses:
-                ray, valid, mask_g = lens.trace(ray)
-                if valid_all is None:
-                    valid_all = valid
-                else:
-                    valid_all = valid_all & valid
-            return ray, valid_all
-
-        ray, valid = _trace(ray, self.lenses) if is_forward else _trace(ray, reversed(self.lenses))
-        return ray, valid
-
-    def trace_to_sensor(self, ray, is_forward=True): # TODO: for now user decides forward or backward
-        """
-        Trace rays towards intersecting onto the sensor plane.
-        """
-        # trace rays
-        ray_final, valid = self.trace(ray, is_forward)
-
-        # intersecting sensor plane
-        t = (self.d_sensor - ray_final.o[...,2]) / ray_final.d[...,2]
-        p = ray_final(t)
-        p = p[valid]
-        return p
-
-    def plot_setup2D(self, show=True):
-        fig, ax = plt.subplots(figsize=(18,6))
-        # draw lenses
-        for lens in self.lenses:
-            lens.plot_setup2D(ax=ax, fig=fig, with_sensor=False)
-        # draw sensor
-        ax.plot([self.d_sensor, self.d_sensor], [-self.r_last, self.r_last], 'k-')
-        if show: plt.show()
-        return ax, fig
+def tex4(img_2d, size_2d, x0, y0, bmode=BoundaryMode.replicate): # texture indexing four pixels
+    _tex = lambda x, y : tex(img_2d, size_2d, x, y, bmode)
+    s00 = _tex(  x0,   y0)
+    s01 = _tex(  x0, 1+y0)
+    s10 = _tex(1+x0,   y0)
+    s11 = _tex(1+x0, 1+y0)
+    return s00, s01, s10, s11
 
 
 class Lensgroup(Endpoint):
     """
-    The Lensgroup (consisted of multiple optical surfaces) is mounted on a rod, whose
-    origin is `origin`. The Lensgroup has full degree-of-freedom to rotate around the
-    x/y axes, with the rotation angles defined as `theta_x`, `theta_y`, and `theta_z` (in degree).
-
-    In Lensgroup's coordinate (i.e. object frame coordinate), surfaces are allocated
-    starting from `z = 0`. There is an additional, comparatively small 3D origin shift
-    (`shift`) between the surface center (0,0,0) and the origin of the mount, i.e.
-    shift + origin = lensgroup_origin.
+    The origin of the Lensgroup, which is a collection of multiple optical surfaces, is located at "origin".
+    The Lensgroup can rotate freely around the x/y axes, and the rotation angles are defined as "theta_x", "theta_y", and "theta_z" (in degrees).
     
-    There are two configurations of ray tracing: forward and backward. In forward mode,
-    rays start from `d = 0` surface and propagate along the +z axis; In backward mode,
-    rays start from `d = d_max` surface and propagate along the -z axis.
+    In the Lensgroup's coordinate system, which is the object frame coordinate system, surfaces are arranged starting from "z = 0".
+    There is a small 3D origin shift, called "shift", between the center of the surface (0,0,0) and the mount's origin.
+    The sum of the shift and the origin is equal to the Lensgroup's origin.
+    
+    There are two configurations for ray tracing: forward and backward.
+    - In the forward mode, rays begin at the surface with "d = 0" and propagate along the +z axis, e.g. from scene to image plane.
+    - In the backward mode, rays begin at the surface with "d = d_max" and propagate along the -z axis, e.g. from image plane to scene.
     """
     def __init__(self, origin=np.zeros(3), shift=np.zeros(3), theta_x=0., theta_y=0., theta_z=0., device=torch.device('cpu')):
         self.origin = torch.Tensor(origin).to(device)
@@ -79,7 +49,11 @@ class Lensgroup(Endpoint):
         self.theta_z = torch.Tensor(np.asarray(theta_z)).to(device)
         self.device = device
 
+        # Sequentials properties
+        self.surfaces = []
+        self.materials = []
         
+        # Sensor properties
         self.pixel_size = 6.45 # [um]
         self.film_size = [640, 480] # [pixel]
 
@@ -93,7 +67,7 @@ class Lensgroup(Endpoint):
         self.d_sensor = d_last + self.surfaces[-1].d
         self._sync()
 
-    def load(self, surfaces, materials):
+    def load(self, surfaces: list, materials: list):
         self.surfaces = surfaces
         self.materials = materials
         self._sync()
@@ -307,29 +281,6 @@ class Lensgroup(Endpoint):
         for surface in self.surfaces:
             points_world = self._generate_points(surface)
             ax.plot(points_world[seq[0]], points_world[seq[1]], points_world[seq[2]], options)
-
-    def generate_mesh(self, name=None, scale=1):
-        points = []
-        for surface in self.surfaces:
-            p, b = self._generate_points(surface, with_boundary=True)
-            del b
-            points.append(scale * p.T)
-
-        # TODO: for now only works for two surfaces
-        x = [points[i][:,0] for i in range(2)]
-        y = [points[i][:,1] for i in range(2)]
-        z = [points[i][:,2] for i in range(2)]
-        tris = [tri.Triangulation(x[i], y[i]) for i in range(2)]
-        triangles = [tris[i].triangles for i in range(2)]
-
-        X = np.hstack((x[0],x[1]))
-        Y = np.hstack((y[0],y[1]))
-        Z = np.hstack((z[0],z[1]))
-        T = np.vstack((triangles[0],1+triangles[0].max()+triangles[1]))
-        mesh = meshio.Mesh(np.stack((X,Y,Z),axis=-1), [("triangle", T)])
-        if name is not None:
-            mesh.write(name)
-        return points
 
     def get_lines_from_plot_setup2D(self, with_sensor=True):
         lines = []
@@ -1201,8 +1152,23 @@ class Lensgroup(Endpoint):
 
 
 class Surface(PrettyPrinter):
+    """
+    This is the base class for optical surfaces.
+
+    The surface is parameterized as an implicit function f(x,y,z) = 0.
+    For simplicity, we assume the surface function f(x,y,z) can be decomposed as:
+    
+    f(x,y,z) = g(x,y) + h(z),
+
+    where g(x,y) and h(z) are explicit functions to be defined in sub-classes.
+
+    Args:
+        r: Radius of the aperture (default to be circular, unless specified as square).
+        d: Distance of z-direction in global coordinate
+        is_square: is the aperture square
+        device: Torch device
+    """
     def __init__(self, r, d, is_square=False, device=torch.device('cpu')):
-        # self.r = torch.Tensor(np.array(r))
         if torch.is_tensor(d):
             self.d = d
         else:
@@ -1219,21 +1185,30 @@ class Surface(PrettyPrinter):
     
     # === Common methods (must not be overridden)
     def surface_with_offset(self, x, y):
+        """
+        Returns the z coordinate plus the surface's own distance; useful when drawing the surfaces.
+        """
         return self.surface(x, y) + self.d
     
     def normal(self, x, y):
+        """
+        Returns the 3D normal vector of the surface at 2D coordinate (x,y), in local coordinate.
+        """
         ds_dxyz = self.surface_derivatives(x, y)
         return normalize(torch.stack(ds_dxyz, axis=-1))
 
     def surface_area(self):
+        """
+        Computes the surface's area.
+        """
         if self.is_square:
             return self.r**2
         else: # is round
-            return math.pi * self.r**2
+            return np.pi * self.r**2
     
     def mesh(self):
         """
-        Generate a meshgrid mesh for the current surface.
+        Generates a 2D meshgrid for the current surface.
         """
         x, y = torch.meshgrid(
             torch.linspace(-self.r, self.r, self.APERTURE_SAMPLING, device=self.device),
@@ -1243,10 +1218,19 @@ class Surface(PrettyPrinter):
         valid_map = self.is_valid(torch.stack((x,y), axis=-1))
         return self.surface(x, y) * valid_map
 
-    def sdf_approx(self, p): # approximated SDF
+    def sdf_approx(self, p):
         """
-        This function is more computationally efficient than `sdf`.
-        - < 0: valid
+        (Approximated) Signed Distance Function (SDF) of a 2D point p to the surface's aperture boundary.
+        If:
+        - Returns < 0: p is within the surface's aperture.
+        - Returns = 0: p is at the surface's aperture boundary.
+        - Returns > 0: p is outside of the surface's aperture.
+
+        Args:
+            p: Local 2D point.
+        
+        Returns:
+            A SDF mask.
         """
         if self.is_square:
             return torch.max(torch.abs(p) - self.r, axis=-1)[0]
@@ -1254,13 +1238,24 @@ class Surface(PrettyPrinter):
             return length2(p) - self.r**2
     
     def is_valid(self, p):
+        """
+        If a 2D point p is valid, i.e. if p is within the surface's aperture.
+        """
         return (self.sdf_approx(p) < 0.0).bool()
 
     def ray_surface_intersection(self, ray, active=None):
         """
+        Computes ray-surface intersection, one of the most crucial functions in this class.
+        Given ray(s) and an activity mask, the function computes the intersection point(s),
+        and determines if the intersection is valid, and update the active mask accordingly. 
+        
+        Args:
+            ray: Rays.
+            active: The initial active mask.
+
         Returns:
-        - p: intersection point
-        - g: explicit funciton
+            valid_o: The updated active mask (if the current ray is physically active in tracing).
+            local: The computed intersection point(s).
         """
         solution_found, local = self.newtons_method(ray.maxt, ray.o, ray.d)
         
@@ -1269,36 +1264,29 @@ class Surface(PrettyPrinter):
             valid_o = active & valid_o
         return valid_o, local
 
-    def newtons_method_impl(self, maxt, t0, dx, dy, dz, ox, oy, oz, A, B, C):
-        if oz.numel() < 2:
-            oz = torch.Tensor([oz.item()]).to(self.device)
-        t_delta = torch.zeros_like(oz)
-
-        # iterate until the intersection error is small
-        t        = maxt * torch.ones_like(oz)
-        residual = maxt * torch.ones_like(oz)
-        it = 0
-        while (torch.abs(residual) > self.NEWTONS_TOLERANCE_TIGHT).any() and (it < self.NEWTONS_MAXITER):
-            it += 1
-            t = t0 + t_delta
-            residual, s_derivatives_dot_D = self.surface_and_derivatives_dot_D(
-                t, dx, dy, dz, ox, oy, t_delta * dz, A, B, C # here z = t_delta * dz
-            )
-            t_delta = t_delta - residual / s_derivatives_dot_D
-        t = t0 + t_delta
-        valid = (torch.abs(residual) < self.NEWTONS_TOLERANCE_LOOSE) & (t <= maxt)
-        return t, t_delta, valid
-
     def newtons_method(self, maxt, o, D, option='implicit'):
-        # Newton's method to find the root of the ray-surface intersection point.
-        # Two modes are supported here:
-        # 
-        # 1. 'explicit": This implements the loop using autodiff, and gradients will be
-        # accurate for o, D, and self.parameters. Slow and memory-consuming.
-        # 
-        # 2. 'implicit": This implements the loop using implicit-layer theory, find the 
-        # solution without autodiff, then hook up the gradient. Less memory-consuming.
+        """
+        Newton's method to find the root of the ray-surface intersection point.
+        
+        Two modes are supported here:
 
+        1. 'explicit": This implements the loop using autodiff, and gradients will be
+        accurate for o, D, and self.parameters. Slow and memory-consuming.
+        
+        2. 'implicit": This implements the loop using implicit-layer theory, find the 
+        solution without autodiff, then hook up the gradient. Less memory-consuming.
+
+        Args:
+            maxt: The maximum travel distance of a single ray.
+            o: The origins of the rays.
+            D: The directional vector of the rays.
+            option: The computing modes.
+
+        Returns:
+            valid: The updated active mask (if the current ray is physically active in tracing).
+            p: The computed intersection point(s).
+        """
+        
         # pre-compute constants
         ox, oy, oz = (o[..., i].clone() for i in range(3))
         dx, dy, dz = (D[..., i].clone() for i in range(3))
@@ -1327,30 +1315,103 @@ class Surface(PrettyPrinter):
             raise Exception('option={} is not available!'.format(option))
 
         p = o + t[..., None] * D
+
         return valid, p
+
+    def newtons_method_impl(self, maxt, t0, dx, dy, dz, ox, oy, oz, A, B, C):
+        """
+        The actual implementation of Newton's method.
+
+        Args:
+            dx,dy,dx,ox,oy,oz,A,B,C: Variables to a quadratic problem.
+        
+        Returns:
+            t: The travel distance of the ray.
+            t_delta: The incremental change of t at each iteration.
+            valid: The updated active mask (if the current ray is physically active in tracing).
+        """
+        if oz.numel() < 2:
+            oz = torch.Tensor([oz.item()]).to(self.device)
+        t_delta = torch.zeros_like(oz)
+
+        # iterate until the intersection error is small
+        t        = maxt * torch.ones_like(oz)
+        residual = maxt * torch.ones_like(oz)
+        it = 0
+        while (torch.abs(residual) > self.NEWTONS_TOLERANCE_TIGHT).any() and (it < self.NEWTONS_MAXITER):
+            it += 1
+            t = t0 + t_delta
+            residual, s_derivatives_dot_D = self.surface_and_derivatives_dot_D(
+                t, dx, dy, dz, ox, oy, t_delta * dz, A, B, C # here z = t_delta * dz
+            )
+            t_delta = t_delta - residual / s_derivatives_dot_D
+        t = t0 + t_delta
+        valid = (torch.abs(residual) < self.NEWTONS_TOLERANCE_LOOSE) & (t <= maxt)
+        return t, t_delta, valid
 
     # === Virtual methods (must be overridden)
     def g(self, x, y):
+        """
+        Function g(x,y).
+
+        Args:
+            x: The x local coordinate.
+            y: The y local coordinate.
+
+        Returns:
+            g(x,y): Function g(x,y) at (x,y).
+        """
         raise NotImplementedError()
 
     def dgd(self, x, y):
         """
-        Derivatives of g: (g'x, g'y).
+        Derivatives of g: (dg/dx, dg/dy).
+
+        Args:
+            x: The x local coordinate.
+            y: The y local coordinate.
+
+        Returns:
+            dg/dx: dg/dx of function g(x,y) at (x,y).
+            dg/dy: dg/dy of function g(x,y) at (x,y).
         """
         raise NotImplementedError()
 
     def h(self, z):
+        """
+        Function h(z).
+
+        Args:
+            z: The z local coordinate.
+
+            
+        Returns:
+            h(z): Function h(z) at z.
+        """
         raise NotImplementedError()
 
     def dhd(self, z):
         """
-        Derivative of h.
+        Derivatives of h: dh/dz.
+
+        Args:
+            z: The z local coordinate.
+
+        Returns:
+            dh/dz: dh/dz of function h(z) at z.
         """
         raise NotImplementedError()
 
     def surface(self, x, y):
         """
         Solve z from h(z) = -g(x,y).
+        
+        Args:
+            x: The x local coordinate.
+            y: The y local coordinate.
+
+        Returns:
+            z: Surface's z coordinate.
         """
         raise NotImplementedError()
 
@@ -1360,8 +1421,22 @@ class Surface(PrettyPrinter):
     # === Default methods (better be overridden)
     def surface_derivatives(self, x, y):
         """
-        Returns \nabla f = \nabla (g(x,y) + h(z)) = (dg/dx, dg/dy, dh/dz).
+        Computes the surface's spatial derivatives:
+        
+        Assume the surface height function f(x,y,z) = g(x,y) + h(z). The spatial derivatives are:
+        
+        \nabla f = \nabla (g(x,y) + h(z)) = (dg/dx, dg/dy, dh/dz).
+        
         (Note: this default implementation is not efficient)
+        
+        Args:
+            x: The x local coordinate.
+            y: The y local coordinate.
+
+        Returns:
+            gx: dg/dx.
+            gy: dg/dy.
+            hz: dh/dz.
         """
         gx, gy = self.dgd(x, y)
         z = self.surface(x, y)
@@ -1369,8 +1444,21 @@ class Surface(PrettyPrinter):
         
     def surface_and_derivatives_dot_D(self, t, dx, dy, dz, ox, oy, z, A, B, C):
         """
-        Returns g(x,y)+h(z) and dot((g'x,g'y,h'), (dx,dy,dz)).
+        Computes the surface and the dot product of its spatial derivatives and ray direction.
+
+        Assume the surface height function f(x,y,z) = g(x,y) + h(z). The outputs are:
+        
+        g(x,y) + h(z)  and  (dg/dx, dg/dy, dh/dz) \cdot (dx,dy,dz).
+
         (Note: this default implementation is not efficient)
+
+        Args:
+            t: The travel distance of the considered ray(s).
+            dx,dy,dx,ox,oy,oz,A,B,C: Variables to a quadratic problem.
+
+        Returns:
+            s: Value of f(x,y,z). The intersection is at the surface if s equals zero.
+            sx*dx + sy*dy + sz*dz: The dot product between the surface's spatial derivatives and ray direction d.
         """
         x = ox + t * dx
         y = oy + t * dy
@@ -1382,7 +1470,22 @@ class Surface(PrettyPrinter):
 
 class Aspheric(Surface):
     """
-    Aspheric surface: https://en.wikipedia.org/wiki/Aspheric_lens.
+    This is the aspheric surface class, implementation follows: https://en.wikipedia.org/wiki/Aspheric_lens.
+
+    The surface is parameterized as an implicit function f(x,y,z) = 0.
+    For simplicity, we assume the surface function f(x,y,z) can be decomposed as:
+    
+    f(x,y,z) = g(x,y) + h(z),
+
+    where g(x,y) and h(z) are explicit functions:
+    
+    g(x,y) = c * r**2 / (1 + sqrt( 1 - (1+k) * r**2/R**2 )) + ai[0] * r**4 + ai[1] * r**6 + \cdots.
+    h(z) = -z.
+    
+    Args (new attributes):
+        c: Surface curvature, or one over radius of curvature.
+        k: Conic coefficient.
+        ai: Aspheric parameters, could be a vector. When None, the surface is spherical.
     """
     def __init__(self, r, d, c=0., k=0., ai=None, is_square=False, device=torch.device('cpu')):
         Surface.__init__(self, r, d, is_square, device)
@@ -1450,7 +1553,24 @@ class Aspheric(Surface):
 
 class BSpline(Surface):
     """
-    Implemented according to Wikipedia.
+    This is the B-Spline surface class, implementation follows Wikipedia, for freeform surfaces.
+
+    The surface is parameterized as an implicit function f(x,y,z) = 0.
+    For simplicity, we assume the surface function f(x,y,z) can be decomposed as:
+    
+    f(x,y,z) = g(x,y) + h(z),
+
+    where g(x,y) and h(z) are explicit functions:
+    
+    g(x,y) is parameterized by a B-Spline surface.
+    h(z) = -z.
+    
+    Args (new attributes):
+        px: Polynomial order in x direction.
+        py: Polynomial order in y direction.
+        tx: Knots in x.
+        ty: Knots in y.
+        c: Spline coefficients.
     """
     def __init__(self, r, d, size, px=3, py=3, tx=None, ty=None, c=None, is_square=False, device=torch.device('cpu')): # input c is 1D
         Surface.__init__(self, r, d, is_square, device)
@@ -1671,8 +1791,20 @@ class BSpline(Surface):
 
 class XYPolynomial(Surface):
     """
-    General XY polynomial surface of equation of parameters:
+    This is the XY polynomial surface class, for freeform surfaces.
     
+    The surface is parameterized as an implicit function f(x,y,z) = 0.
+    For simplicity, we assume the surface function f(x,y,z) can be decomposed as:
+    
+    f(x,y,z) = g(x,y) + h(z),
+
+    where g(x,y) and h(z) are explicit functions:
+    
+    g(x,y) = \sum{i,j} a_ij x^i y^{j-i}.
+    h(z) = b z^2 - z.
+
+    Or, re-write f(x,y,z) in the following:
+
     explicit:   b z^2 - z + \sum{i,j} a_ij x^i y^{j-i} = 0
     implicit:   (denote c = \sum{i,j} a_ij x^i y^{j-i})
                 z = (1 - \sqrt{1 - 4 b c}) / (2b)
@@ -1683,6 +1815,11 @@ class XYPolynomial(Surface):
     dx = \sum{i,j} a_ij   i   x^{i-1} y^{j-i}
     dy = \sum{i,j} a_ij (j-i) x^{i}   y^{j-i-1}
     dz = 2 b z - 1
+    
+    Args (new attributes):
+        J: Polynomial order.
+        ai: Polynomial coefficients.
+        b: Coefficient in h(z).
     """
     def __init__(self, r, d, J=0, ai=None, b=None, is_square=False, device=torch.device('cpu')):
         Surface.__init__(self, r, d, is_square, device)
@@ -1819,13 +1956,27 @@ class XYPolynomial(Surface):
 
 class Mesh(Surface):
     """
-    Linear mesh representation for freeform surface.
+    This is the linear mesh surface class, for freeform surfaces.
+    
+    The surface is parameterized as an implicit function f(x,y,z) = 0.
+    For simplicity, we assume the surface function f(x,y,z) can be decomposed as:
+    
+    f(x,y,z) = g(x,y) + h(z),
+
+    where g(x,y) and h(z) are explicit functions:
+    
+    g(x,y) is parameterized by its attribute c.
+    h(z) = z.
+
+    Args (new attributes):
+        c: Surface rasterization array, i.e. the 2D discretization for the surface's height.
     """
     def __init__(self, r, d, size, c=None, is_square=False, device=torch.device('cpu')):
         Surface.__init__(self, r, d, is_square, device)
         if c is None:
             self.c = torch.zeros(size).to(device)
         else:
+            c_shape = size + np.array([self.px, self.py]) + 1
             c = np.asarray(c)
             if c.size != np.prod(c_shape):
                 raise Exception('len(c) is not correct!')
@@ -1884,26 +2035,12 @@ class Mesh(Surface):
         self.c = -self.c
 
     # === Private methods
-    def _tex(self, x, y, bmode=BoundaryMode.replicate): # texture indexing function
-            if bmode is BoundaryMode.zero:
-                raise NotImplementedError()
-            elif bmode is BoundaryMode.replicate:
-                x = torch.clamp(x, min=0, max=self.size_np[0]-1)
-                y = torch.clamp(y, min=0, max=self.size_np[1]-1)
-            elif bmode is BoundaryMode.symmetric:
-                raise NotImplementedError()
-            elif bmode is BoundaryMode.periodic:
-                raise NotImplementedError()
-            img = self.c[x.flatten(), y.flatten()]
-            return img.reshape(x.shape)
-
+    def _tex(self, x0, y0, bmode=BoundaryMode.replicate): # texture indexing four pixels
+        return tex(self.c, self.size_np, x0, y0, bmode)
+    
     def _tex4(self, x0, y0, bmode=BoundaryMode.replicate): # texture indexing four pixels
-        s00 = self._tex(  x0,   y0, bmode)
-        s01 = self._tex(  x0, 1+y0, bmode)
-        s10 = self._tex(1+x0,   y0, bmode)
-        s11 = self._tex(1+x0, 1+y0, bmode)
-        return s00, s01, s10, s11
-
+        return tex4(self.c, self.size_np, x0, y0, bmode)
+    
     def _shading(self, x, y, bmode=BoundaryMode.replicate, lmode=InterpolationMode.linear):
         p = (torch.stack((x,y), axis=-1)/(2*self.r) + 0.5) * (self.size-1)
         p_floor = torch.floor(p).long()
